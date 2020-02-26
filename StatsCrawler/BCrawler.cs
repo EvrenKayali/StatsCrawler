@@ -6,7 +6,7 @@ using HtmlAgilityPack;
 using StatsCrawler.Models;
 using System.Globalization;
 using System.Text.RegularExpressions;
-
+using System.Xml.Linq;
 
 namespace StatsCrawler
 {
@@ -107,6 +107,24 @@ namespace StatsCrawler
             }
 
             return fxture;
+        }
+
+        public static void GetAllTeams()
+        {
+            int i = 1;
+            string url = "http://arsiv.mackolik.com/Takim/{0}/";
+            Team team;
+
+            while (true)
+            {
+                var web = new HtmlWeb();
+                var doc = web.Load(string.Format(url,i));
+
+                team = new Team();
+                team.TeamID = i;
+
+
+            }
         }
     }
 }
