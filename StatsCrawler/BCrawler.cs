@@ -7,12 +7,17 @@ using StatsCrawler.Models;
 using System.Globalization;
 using System.Text.RegularExpressions;
 using System.Xml.Linq;
+using System.Xml.Serialization;
+using System.IO;
 
 namespace StatsCrawler
 {
     public static class BCrawler
     {
 
+        #region trash
+
+        /*
         public static void GetFromWeb(string url)
         {
             var web = new HtmlWeb();
@@ -43,7 +48,8 @@ namespace StatsCrawler
             var a = aa.Descendants().Where(n => n.Name == "tr").ToList();
 
         }
-
+        */
+        #endregion
 
         public static List<Fixture> GetCurrentSeasonFixturesByTeam()
         {
@@ -111,19 +117,37 @@ namespace StatsCrawler
 
         public static void GetAllTeams()
         {
-            int i = 1;
+            int i = 2967;
             string url = "http://arsiv.mackolik.com/Takim/{0}/";
             Team team;
-
+            List<Team> lstTeams = new List<Team>();
             while (true)
             {
                 var web = new HtmlWeb();
                 var doc = web.Load(string.Format(url,i));
 
+                if (doc.DocumentNode.ChildNodes.Count == 0)
+                    break;
+
                 team = new Team();
                 team.TeamID = i;
+                team.TeamName = doc.DocumentNode.Descendants("h1").First().InnerText.Trim();
+                team.Competition = doc.DocumentNode.Descendants("a").ToList()[3].InnerText.StripHTML();
+                lstTeams.Add(team);
+                i++;
+            }
+
+            SerializeObject(lstTeams, AppDomain.CurrentDomain.BaseDirectory+"\\testemre.xml");
+
+        }
 
 
+        static void SerializeObject(this List<Team> list, string fileName)
+        {
+            var serializer = new XmlSerializer(typeof(List<Team>));
+            using (var stream = File.OpenWrite(fileName))
+            {
+                serializer.Serialize(stream, list);
             }
         }
     }
