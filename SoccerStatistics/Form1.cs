@@ -20,7 +20,13 @@ namespace SoccerStatistics
 
         private void BtnTest_Click(object sender, EventArgs e)
         {
-            BCrawler.GetFromWeb("http://arsiv.mackolik.com/Team/Default.aspx?id=3&season=2015/2016");
+            //BCrawler.GetFromWeb("http://arsiv.mackolik.com/Team/Default.aspx?id=3&season=2015/2016");
+            //BCrawler.GetFromWeb2("http://arsiv.mackolik.com/Team/Default.aspx?id=3");
+        }
+
+        private void Form1_Load(object sender, EventArgs e)
+        {
+            BCrawler.GetCurrentSeasonFixturesByTeam();
         }
     }
 }
