@@ -106,7 +106,8 @@ namespace StatsCrawler
             }
             catch(Exception ex)
             {
-
+                Logger logger = new Logger();
+                logger.InsertErrorLog("SetFixtureProps", ex.Message, Logger.EnLogType.Error);
             }
 
             return fxture;
@@ -119,7 +120,7 @@ namespace StatsCrawler
             string url = "http://arsiv.mackolik.com/Takim/{0}/";
             Team team;
             List<Team> lstTeams = new List<Team>();
-            while (i<20)
+            while (true)
             {
                 var web = new HtmlWeb();
                 var doc = web.Load(string.Format(url,i));
