@@ -9,79 +9,76 @@ using System.Text.RegularExpressions;
 using System.Xml.Linq;
 using System.Xml.Serialization;
 using System.IO;
+using System.Net.Http;
+using Newtonsoft.Json;
+using System.Threading;
+using System.Threading.Tasks;
+
 
 namespace StatsCrawler
 {
     public static class BCrawler
-    {
+    {   
 
-        #region trash
-
-        /*
-        public static void GetFromWeb(string url)
+        public static async  Task<List<Fixture>> GetOpenFixtureByCompetition(int competitionID,string currentWeek)
         {
+            List<Fixture> lstFixtures = new List<Fixture>();
+            string url = string.Format("http://arsiv.mackolik.com/Puan-Durumu/{0}/",competitionID.ToString());
             var web = new HtmlWeb();
             var doc = web.Load(url);
-            List<HtmlNode> hnodes = doc.DocumentNode.Descendants("table").ToList();
-            var tblNode = doc.DocumentNode.Descendants("table").Select(tbl => tbl.Attributes["id"].Value == "tblFixture");
-            HtmlNode node =  doc.DocumentNode.Descendants("table").Where(tbl => tbl.Attributes["class"].Value == "kulup-tbl").ToList().First();
-            HtmlNode node2 = doc.DocumentNode.Descendants("table").Where(tbl => tbl.Attributes["class"].Value == "list-table").ToList().First();
+            var client = new HttpClient();
+            var reqId =doc.GetElementbyId("cboSeason").ChildNodes[1].Attributes[0].Value;
+            string ajaxRequestUrl = string.Format("http://arsiv.mackolik.com/AjaxHandlers/FixtureHandler.aspx?command=getMatches&id={0}&week={1}", reqId, currentWeek);
 
-
-
-            var a = node2.Descendants().Where(n => n.Name == "tr");
-
-            var alist = node2.Descendants().Where(n => n.Name == "tr").ToList();
-            //List<HtmlNode> rows = node2.ChildNodes.Where(n => n.Attributes["Class"].Value.StartsWith("row alt")).ToList();
-            //List<HtmlNode> rows = node2.DescendantNodes(1).Where(n => n.Attributes["Class"].Value.StartsWith("row alt")).ToList();
-
+            var message = new HttpRequestMessage(HttpMethod.Get, ajaxRequestUrl);
+            message.Headers.Referrer = new Uri(url);
+            var result = await client.SendAsync(message);
+            var data = await result.Content.ReadAsStringAsync();
+            var rows = JsonConvert.DeserializeObject<object[][]>(data);
+            Fixture fixture;
+            foreach (var item in rows)
+            {
+                fixture = new Fixture();
+                fixture.HomeTeam = new Team { TeamName = item[4].ToString() };
+                fixture.AwayTeam = new Team { TeamName = item[6].ToString() };
+                lstFixtures.Add(fixture);
+            }
+            return  lstFixtures;
 
         }
 
-
-        public static void GetFromWeb2(string url)
+        public static string GetCurrentWeek(int competitionID)
         {
+            string url = string.Format("http://arsiv.mackolik.com/Puan-Durumu/{0}/", competitionID.ToString());
             var web = new HtmlWeb();
             var doc = web.Load(url);
-            List<HtmlNode> hnodes = doc.DocumentNode.Descendants("table").ToList();
-            HtmlNode aa = hnodes.Where(h => h.Attributes["id"] != null && h.Attributes["id"].Value =="tblFixture").ToList().First();
-            var a = aa.Descendants().Where(n => n.Name == "tr").ToList();
-
+            HtmlNode script = doc.DocumentNode.Descendants("script").Where(s => s.InnerText.Contains("currentWeek")).First();
+            var week = script.InnerHtml.Substring(script.InnerHtml.IndexOf("currentWeek") + 14, 3);
+            return week.Substring(0, week.IndexOf(';'));
         }
-        */
-        #endregion
-
-        public static List<Fixture> GetCurrentSeasonFixturesByTeam()
+        public static List<Fixture> GetCurrentSeasonFixturesByTeam(int teamID)
         {
-            string url = "http://arsiv.mackolik.com/Team/Default.aspx?id=3";
+            string url = "http://arsiv.mackolik.com/Team/Default.aspx?id="+teamID;
             List<Fixture> lstFixtures = new List<Fixture>();
             var web = new HtmlWeb();
             var doc = web.Load(url);
 
-            var rows = doc.DocumentNode.Descendants("table").ToList().Where(tbl => tbl.Attributes["id"] != null && tbl.Attributes["id"].Value == "tblFixture").First()
-                .Descendants().Where(node => node.Name == "tr").ToList();
+            var rows = doc.GetElementbyId("tblFixture").Descendants().Where(node => node.Name == "tr").ToList();
 
-            Fixture fxture;
-            foreach (var item in rows)
-            {
-                if(item.Attributes["class"]!=null && item.Attributes["class"].Value.StartsWith("row alt"))
-                {
-                    fxture = new Fixture();
-                    fxture.SetFixtureProps(item);
-                    if (fxture.HomeTeam == null)
-                        break;
-                    lstFixtures.Add(fxture);
-                }
+            lstFixtures = doc.GetElementbyId("tblFixture")
+               .Descendants()
+               .Where(node => node.Name == "tr" && node.Attributes["class"].Value.StartsWith("row alt"))
+               .Select(i => SetFixtureProps(i)).ToList();
 
+            return lstFixtures.Take(lstFixtures.FindIndex(f=>f==null)).ToList();
+            //return lstFixtures.Where(f => f != null && f.GameDate < DateTime.Now).ToList();
 
-            }
-
-            return lstFixtures;
         }
 
 
-        private static Fixture SetFixtureProps(this Fixture fxture, HtmlNode item)
+        private static Fixture SetFixtureProps(HtmlNode item)
         {
+            var fxture = new Fixture();
             if(item.ChildNodes[9].InnerText.StripHTML() =="v")
             {
                 return null;
@@ -117,17 +114,25 @@ namespace StatsCrawler
 
         public static void GetAllTeams()
         {
-            int i = 2967;
+            int i = 1;
+            int noRecordsCount = 0;
             string url = "http://arsiv.mackolik.com/Takim/{0}/";
             Team team;
             List<Team> lstTeams = new List<Team>();
-            while (true)
+            while (i<20)
             {
                 var web = new HtmlWeb();
                 var doc = web.Load(string.Format(url,i));
 
                 if (doc.DocumentNode.ChildNodes.Count == 0)
-                    break;
+                {
+                    noRecordsCount++;
+                    i++;
+                    if (noRecordsCount == 50)
+                        break;
+                    continue;
+                }
+                noRecordsCount = 0;   
 
                 team = new Team();
                 team.TeamID = i;
@@ -137,14 +142,56 @@ namespace StatsCrawler
                 i++;
             }
 
-            SerializeObject(lstTeams, AppDomain.CurrentDomain.BaseDirectory+"\\testemre.xml");
+            File.WriteAllText(AppDomain.CurrentDomain.BaseDirectory + "\\teams.json", JsonConvert.SerializeObject(lstTeams));
+            //SerializeObject(lstTeams, AppDomain.CurrentDomain.BaseDirectory+"\\teams.xml");            
+        }
+
+        public static void GetAllCompetitions()
+        {
+            int i = 0;
+            int noRecordsCount = 0;
+            string url = "http://arsiv.mackolik.com/Puan-Durumu/{0}/";
+            Competition competition;
+            List<Competition> lstCompetitions = new List<Competition>();
+            while (true)
+            {
+                i++;
+                var web = new HtmlWeb();
+                var doc = web.Load(string.Format(url, i));
+                if (doc.DocumentNode.ChildNodes.Count == 0)
+                {
+                    noRecordsCount++;                   
+                    if (noRecordsCount == 50)
+                        break;
+                    continue;
+                }
+                noRecordsCount = 0;
+
+                competition = new Competition();
+                if (doc.DocumentNode.Descendants("h1").Count() > 0)
+                {
+                    competition.CompetitionID = i;
+                    competition.CompetitionName = doc.DocumentNode.Descendants("h1").First().InnerText.Trim();
+                }
+                else
+                    continue;
+
+                lstCompetitions.Add(competition);
+                
+                if (i >= 120) //120'den sonra geçmiş avrupa-dünya şampiyonaları veya play-off'lar gibi competition'lara geçiyor
+                    break;
+
+            }
+            File.WriteAllText(AppDomain.CurrentDomain.BaseDirectory + "\\competitions.json", JsonConvert.SerializeObject(lstCompetitions));
+            //SerializeObject(lstCompetitions, AppDomain.CurrentDomain.BaseDirectory + "\\competitions.xml");
 
         }
 
 
-        static void SerializeObject(this List<Team> list, string fileName)
-        {
-            var serializer = new XmlSerializer(typeof(List<Team>));
+
+        static void SerializeObjectToXml<T>(this List<T> list, string fileName)
+        {   
+            var serializer = new XmlSerializer(typeof(List<T>));
             using (var stream = File.OpenWrite(fileName))
             {
                 serializer.Serialize(stream, list);
