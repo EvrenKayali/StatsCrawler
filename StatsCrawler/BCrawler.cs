@@ -65,10 +65,14 @@ namespace StatsCrawler
 
             var rows = doc.GetElementbyId("tblFixture").Descendants().Where(node => node.Name == "tr").ToList();
 
-            lstFixtures = doc.GetElementbyId("tblFixture")
-               .Descendants()
-               .Where(node => node.Name == "tr" && node.Attributes["class"].Value.StartsWith("row alt"))
-               .Select(i => SetFixtureProps(i)).ToList();
+            //lstFixtures = doc.GetElementbyId("tblFixture")
+            //   .Descendants()
+            //   .Where(node => node.Name == "tr" && node.Attributes["class"].Value.StartsWith("row alt"))
+            //   .Select(i => SetFixtureProps(i)).ToList();
+
+
+            lstFixtures = doc.DocumentNode.SelectNodes(@"//table[@id='tblFixture']/tr[@class='competition'][2]/
+                                    preceding-sibling::tr[contains(@class, 'row alt')]").Select(i => SetFixtureProps(i)).ToList(); 
 
             return lstFixtures.Take(lstFixtures.FindIndex(f=>f==null)).ToList();
             //return lstFixtures.Where(f => f != null && f.GameDate < DateTime.Now).ToList();
