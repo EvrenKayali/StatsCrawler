@@ -9,7 +9,7 @@ namespace SoccerStatistics.Models
     public class TeamStats
     {
         public double OverPercentageSeason { get; set; }
-        public double OverPercentageLast3 { get; set; }
+        public double OverPercentageSelectedWeeks { get; set; }
         public double OverPercentageHome { get; set; }
         public double OverPercentageAway { get; set; }
     }

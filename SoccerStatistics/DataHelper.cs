@@ -1,7 +1,10 @@
-﻿using Newtonsoft.Json;
+﻿using ClosedXML.Excel;
+using Newtonsoft.Json;
+using SoccerStatistics.Models;
 using StatsCrawler.Models;
 using System;
 using System.Collections.Generic;
+using System.Data;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -25,6 +28,14 @@ namespace SoccerStatistics
         public static int GetTeamIDByName(string teamName)
         {
             return ((Team)GetTeams().Where(t => t.TeamName.Contains(teamName)).First()).TeamID;            
+        }
+
+
+        public static void ExportGameStats(DataTable dt,string fileName)
+        {
+            XLWorkbook wb = new XLWorkbook();
+            wb.Worksheets.Add(dt, "Stats");
+            wb.SaveAs(AppDomain.CurrentDomain.BaseDirectory + "\\" + fileName + ".xlsx");
         }
 
         #region private
